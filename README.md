@@ -1,0 +1,1 @@
+# mganik-technical-test
