@@ -3,6 +3,7 @@ import { StatusCodes } from 'http-status-codes';
 import createError from 'http-errors';
 import { GetInventoryReportValidator } from '../validators/Inventory/GetInventoryReportValidator.js';
 import { InventoryController } from '../controllers/InventoryController.js';
+import { InventoryReduceValidator } from '../validators/Inventory/InventoryReduceValidator.js';
 
 export const inventoryRouter = express.Router({
   strict: true
@@ -33,19 +34,18 @@ inventoryRouter.get('/report', async (req: Request, res: Response, next: NextFun
 
 inventoryRouter.patch('/:id/reduce', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { error, value } = GetInventoryReportValidator.getAllQuery(req);
+    const { error, value } = InventoryReduceValidator.getQuery(req);
     if (error) {
       let message = 'Internal Server Error';
       if (error.details[0]?.message) message = error.details[0]?.message;
       throw createError(StatusCodes.BAD_REQUEST, message);
     }
-    const result = await inventoryController.getInventoryReport(value);
+    await inventoryController.reduceInventory(value.productId, value);
     res
       .status(StatusCodes.OK)
       .json({
-        message: 'GET_INVENTORY_REPORT',
+        message: 'REDUCE_INVENTORY_STOCK',
         status: StatusCodes.OK,
-        content: result,
       });
   } catch (err) {
     next(err);

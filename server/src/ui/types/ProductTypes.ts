@@ -2,7 +2,7 @@ export interface ProductType {
   product_id: number;
   name: string;
   stock: number;
-  category: ProductCategoryType;
+  category?: ProductCategoryType;
 }
 
 export interface ProductCategoryType {

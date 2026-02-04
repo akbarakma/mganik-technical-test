@@ -1,13 +1,16 @@
-import { Route, Tags, Get, Queries } from "tsoa";
+import { Route, Tags, Get, Queries, Patch, Body, Path } from "tsoa";
 import type { GetInventoryReportValidator } from "../validators/Inventory/GetInventoryReportValidator.js";
 import { PaginationHelper } from "../helpers/PaginationHelper.js";
 import dbImport from "../../sequelize/models/index.cjs";
 import type { ProductCategoryType, ProductType } from "../types/ProductTypes.js";
 import type { IPaginationMeta } from "../types/CommonTypes.js";
+import type { InventoryReduceValidator } from "../validators/Inventory/InventoryReduceValidator.js";
+import createHttpError from "http-errors";
+import { StatusCodes } from "http-status-codes";
 
 const db = dbImport as any;
 
-const { products, categories, Sequelize } = db;
+const { products, categories, stock_logs, Sequelize, sequelize } = db;
 
 @Route("/api/inventory")
 @Tags('Inventory API')
@@ -71,5 +74,60 @@ export class InventoryController {
       count: productDataRaw.count,
       paginationMeta: paginationMeta,
     };
+  }
+
+  @Patch(':id/reduce')
+  public async reduceInventory(@Path() id: number, @Body() query: InventoryReduceValidator): Promise<boolean> {
+    if (query.amount < 1) {
+      throw createHttpError(StatusCodes.BAD_REQUEST, 'Please select the correct Amount');
+    }
+
+    const t = await sequelize.transaction();
+    try {
+      const inventoryDataRaw = await products.findOne({
+        where: {
+          id: id,
+          is_deleted: false,
+        },
+        transaction: t,
+        lock: t.LOCK.UPDATE,
+        attributes: ['id', 'name', 'stock'],
+      });
+      if (!inventoryDataRaw) throw createHttpError(StatusCodes.NOT_FOUND, 'Product Not Found');
+      const productData: ProductType = {
+        product_id: inventoryDataRaw.id,
+        name: inventoryDataRaw.name,
+        stock: inventoryDataRaw.stock,
+      }
+
+      if (productData.stock < query.amount) {
+        throw createHttpError(StatusCodes.BAD_REQUEST, 'Stock is not Available');
+      }
+
+      const newStock = productData.stock - query.amount;
+      
+      await products.update({ stock: newStock },
+        {
+          where: {
+            id: productData.product_id,
+          },
+          transaction: t,
+        },
+      );
+
+      await stock_logs.create({
+        product_id: productData.product_id,
+        type: 'REDUCE',
+        time: new Date(),
+      }, {
+        transaction: t,
+      });
+
+      await t.commit();
+      return true;
+    } catch (err) {
+      await t.rollback();
+      throw err;
+    }
   }
 }
