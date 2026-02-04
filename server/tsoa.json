@@ -1,0 +1,17 @@
+{
+  "entryFile": "src/index.ts",
+  "noImplicitAdditionalProperties": "throw-on-extras",
+  "spec": {
+    "basePath": "/",
+    "entryFile": "src/index.ts",
+    "specVersion": 3,
+    "outputDirectory": "./src/swagger",
+    "noImplicitAdditionalProperties": "throw-on-extras"
+  },
+  "routes": {
+    "basePath": "/",
+    "entryFile": "src/index.ts",
+    "routesDir": "./src/swagger",
+    "noImplicitAdditionalProperties": "throw-on-extras"
+  }
+}
